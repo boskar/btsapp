@@ -1,47 +1,22 @@
 #!/usr/bin/perl 
-# (C) by boskar 2011,2012
+# (C) by boskar 2011,2012,2013
 use strict;
 use warnings;
 use Net::DBus::GLib;
-use Format::Human::Bytes;
-use Glib qw/TRUE FALSE/;
-#use utf8;
-#BEGIN { $ENV{LC_ALL} = "pl_PL.utf8"; }
 
-#use utf8;   # Needed for Hebrew
+use Glib qw/TRUE FALSE/;
 
 use Gtk2 '-init';
 use Gtk2::TrayIcon;
-#use utf8;
+
 use DBI;
-use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
-use LWP::Simple;
-my $notyfikacje = TRUE;
-my $signal_stats = FALSE;
-my $aktualizuj_baze = TRUE;
+
+
+
 my $bazabts = "bts";
-#my $bazaplik = $ENV{"HOME"} . "/.btsapp.sqlite";
+
 my $bazaplik = "./btsapp.sqlite";
 
-if ($notyfikacje) {
-use Gtk2::Notify '-init', "LAC/CID";
-}
-
-
-if (-e $bazaplik) {
-(my $content_type_bazy, my $dlugosc_bazy, my $czas_mod_bazy, my $expires_bazy, my $server_bazy) = head ("http://obsolete/btsapp/btsapp.sqlite");
-unless ($dlugosc_bazy != -s $bazaplik) { 
-$aktualizuj_baze = FALSE;
-
-}}
-if ($aktualizuj_baze) {
-my $temp_bz2 = $ENV{"HOME"} . "/.btsapp.sqlite.bz2";
-$| = TRUE;
-print "Aktualizuję bazę BTSów!\n";
-getstore("http://obsolete/btsapp/btsapp.sqlite.bz2",$temp_bz2);
-bunzip2 $temp_bz2 => $bazaplik;
-unlink $temp_bz2;
-}
 
 
 my $icon = Gtk2::TrayIcon->new("LAC/CID");
@@ -81,10 +56,7 @@ print  $device_proper_nm ;
 my $object_nm = $service_nm->get_object($device_proper_nm);
 my $device_proper_mm = $object_nm->Get("org.freedesktop.NetworkManager.Device","Udi"); 
 print $device_proper_mm;
-if ($signal_stats) {
-my $interface_nm = $object_nm->as_interface("org.freedesktop.NetworkManager.Device");
-$object_nm->connect_to_signal("PppStats",\&update_pppstats);
-}
+
 
 #print $object_nm->Get("org.freedesktop.NetworkManager.Device","Udi"); 
 #print $interface_nm->("Udi");
@@ -135,19 +107,10 @@ $vbox->pack_start($cidlabel,0,0,0);
 
 my $ipstatlabel_in;
 my $ipstatlabel_out;
-if ($signal_stats) {
-$ipstatlabel_in = Gtk2::Label->new;
-$ipstatlabel_in->set_markup("<span size=\"x-small\">DL: czekaj...</span>");
-$ipstatlabel_out = Gtk2::Label->new;
-$ipstatlabel_out->set_markup("<span size=\"x-small\">UL: czekaj...</span>");
 
-$vbox_ppp->pack_start($ipstatlabel_in,1,1,0);
-$vbox_ppp->pack_start($ipstatlabel_out,0,0,0);
-}
 
 $hbox->pack_start($vbox,1,1,0);
 
-if ($signal_stats) { $hbox->pack_start($vbox_ppp,0,0,0); }
 
 my $eventbox = Gtk2::EventBox->new;
 $eventbox->add($hbox);
@@ -203,9 +166,7 @@ sub update_laccid {
 	while (my $data = $sth->fetchrow_arrayref()) {
 	$comment = $data->[0]; }
 	$tooltip->set_tip($eventbox, $comment);
-	if ($notyfikacje == TRUE) {
-	my $notification = Gtk2::Notify->new("Nowy BTS/nodeB", $comment);
-	$notification->show; }
+
 	}
 	
 	else
@@ -243,12 +204,4 @@ if ($event->button == 1) {
 
 if ($event->button == 3) { Gtk2->main_quit; return 1; };
 #else { return FALSE; };
-}
-
-sub update_pppstats {
-	my ($in,$out) = @_;
-	my $in_kb = Format::Human::Bytes->base2($in);
-	$ipstatlabel_in->set_markup("<span size=\"x-small\">DL: $in_kb</span>");  
-	my $out_kb = Format::Human::Bytes->base2($out);
-	$ipstatlabel_out->set_markup("<span size=\"x-small\">UL: $out_kb</span>");  
 }
